@@ -1,0 +1,6 @@
+[submodule "Lung_data_preprocessing"]
+	path = Lung_data_preprocessing
+	url = https://github.com/taeHellstrom/Lung_data_preprocessing.git
+[submodule "utils/Lung_data_preprocessing"]
+	path = utils/Lung_data_preprocessing
+	url = https://github.com/taeHellstrom/Lung_data_preprocessing.git
