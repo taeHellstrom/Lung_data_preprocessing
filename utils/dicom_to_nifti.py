@@ -5,7 +5,7 @@ import numpy as np
 import re
 import utils.calc_ROI as cr
 import SimpleITK as sitk
-
+import rt_utils
 
 def Boundingboxed(data_path, label_path, output_dir, bb_dir, number, phase):
 
@@ -944,7 +944,7 @@ def dicom_read_LIDC_CT_and_label(CT_path, label_path, label_name):
 
     CT_image = reader.Execute()
 
-    label_file_path = os.path.join(label_path, label_name, '1-1.dcm')
+    label_file_path = os.path.join(label_path, label_name)#, '1-1.dcm')
 
     label_image = sitk.ReadImage(label_file_path)
 
@@ -1060,6 +1060,48 @@ def dicom_to_nifty_LIDC(CT_path, label_path, label_name, output_dir = None, save
         writer = sitk.ImageFileWriter()
         writer.SetFileName(filepath_label)
         writer.Execute(full_size_label)
+
+def read_RT_struct(mask_dir, ct_dir, CT_sitk, output_dir=None, save_num=None):
+    if (not output_dir == None) and  not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    rtstruct = rt_utils.RTStructBuilder.create_from(
+    dicom_series_path=ct_dir, 
+    rt_struct_path=mask_dir
+    )
+    struct_names = rtstruct.get_roi_names()
+    im_orig = CT_sitk.GetOrigin()
+    im_spacing = CT_sitk.GetSpacing()
+    im_direction = CT_sitk.GetDirection()
+    im_size = CT_sitk.GetSize()
+    for struct in struct_names:
+        struct_array = rtstruct.get_roi_mask_by_name(struct).astype(int)    # Include .astype(int) to convert from bool to int
+        
+        
+        struct_sitk = sitk.GetImageFromArray(struct_array)
+        
+        struct_sitk.SetOrigin(im_orig)
+        struct_sitk.SetSpacing(im_spacing)
+        struct_sitk.SetDirection(im_direction)
+        if not output_dir == None:
+            if 'Nodule' in struct:
+                break
+                struct = 'Nodule_seg_1'
+            elif 'Lung' in struct:
+                struct = struct[:5] + '_lung_seg'
+            filename = save_num + "_" + struct + ".nii.gz"
+            filepath = os.path.join(output_dir, filename)
+            j=2
+            while os.path.exists(filepath):
+                struct = 'Nodule_seg_' + str(j)
+                filename = save_num + "_" + struct + ".nii.gz"
+                filepath = os.path.join(output_dir, filename)
+                j+=1
+
+            print(f'Saving struct {struct} to {filepath}')
+            writer = sitk.ImageFileWriter()
+            writer.SetFileName(filepath)
+            writer.Execute(struct_sitk)
+
 
 
 if __name__ == "__main__":
